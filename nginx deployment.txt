@@ -1,0 +1,40 @@
+controlplane $ cat deploy.yaml
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: testing
+  name: testing
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: testing
+  template:
+    metadata:
+      labels:
+        app: testing
+    spec:
+      serviceAccountName: admintest
+      containers:
+      - image: mehulpal/mehul:nginx
+        name: webserver
+        ports:
+        - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: testing-svc
+  name: testing-svc
+spec:
+  ports:
+  - port: 8080
+    protocol: TCP
+    targetPort: 8080
+    nodePort: 32000
+  selector:
+    app: testing
+  type: NodePort

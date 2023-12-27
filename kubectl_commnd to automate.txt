@@ -1,0 +1,1 @@
+ podname=$(kubectl get pods -o=jsonpath='{.items[*].spec.containers[*].name}' | grep -o "webserver")
