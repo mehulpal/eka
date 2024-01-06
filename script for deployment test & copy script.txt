@@ -1,0 +1,8 @@
+#! /bin/bash
+echo "Creating a apache webserver container for testing under new namespace"
+echo "creating a new  namespace name as testing2"
+kubectl create ns testing2
+kubectl create deployment test1 --image=httpd --port 80 -n testing2
+podname=$(kubectl get pods -n testing1 -o=jsonpath='{.items[*].metadata.name}')
+echo -n  "Copying script to $podname"
+kubectl cp script.sh testing1/$podname:/
