@@ -1,0 +1,22 @@
+#! /bin/bash
+echo "Creating a apache webserver container for testing under new namespace"
+echo "Creating a new  namespace name as netbackup"
+kubectl create ns netbackup
+echo -ne '>>>                       [20%]\r'
+sleep 1
+echo "Creating a new  secret and config map in netbackup namespace"
+kubectl create secret generic test --from-literal=username=mehul --from-literal=password=password -n netbackup
+echo -ne '>>>>>>>                   [40%]\r'
+sleep 1
+kubectl create configmap my-config --from-literal=key1=very --from-literal=key2=charm -n netbackup
+echo -ne '>>>>>>>>>>>>>>            [60%]\r'
+sleep 1
+kubectl apply -f testingdeployment.yaml
+echo -ne '>>>>>>>>>>>>>>>>>>>>>>>   [80%]\r'
+sleep 2
+kubectl apply -f deployment.yaml
+echo -ne '>>>>>>>>>>>>>>>>>>>>>>>>>>[100%]\r'
+sleep 10
+podname=$(kubectl get pods -n testing1 -o=jsonpath='{.items[*].metadata.name}')
+echo -n  "Copying script to $podname"
+kubectl cp script.sh testing1/$podname:/
