@@ -1,0 +1,126 @@
+#! /bin/bash
+getpods()
+{
+local n
+local p
+  read -p  "please provide the namespace name: " n
+  read -p " provide the podname: " p
+  $(kubectl get pods -n $n $p > /tmp/singlepodgetresult.log)
+}
+
+describepods()
+{
+ read -p  "please provide the namespace : " var1
+ read -p " please provide the pod name: " var2
+ $(kubectl describe pod  -n $var1 $var2 > /tmp/describingsinglepod.log)
+
+}
+
+getconfigmaps()
+{
+read -p "please provide the namespace from which you want to see the config: " ns
+$(kubectl get configmap -n $ns > /tmp/specificconfigmap.log)
+printf "would you also like to describe config as well: Type Either Yes or No: " 
+read a
+if [ "$a" = "Yes" ]; then
+    $(kubectl describe configmap -n $ns > /tmp/describeconfigmap.log) 
+else
+     printf "as you mentioned 'No' hence exiting"
+     exit 0
+fi
+
+}
+
+getlogs()
+{
+local ans
+local custom
+local cn
+read -p "Please enter the namespace name where nbukops pod is container is created: "  ans
+custom=$(kubectl get pods -n $ans --no-headers=true | awk '{print $1}')
+cn=$(kubectl get pods -n $ans -o=jsonpath="{range .items[*]}{.spec.containers[*].name}"| grep -o "netbackupkops")
+#echo "container name fetched is $cn"
+if [ "$cn" != "netbackupkops" ]
+then
+        echo " netbackupkops container not found hence exiting"
+        exit
+fi
+
+$(kubectl logs $custom -n $ans -c $cn > /tmp/controllerpodlogs)
+echo "This will also collect collect secret and configmap for kops pods"
+$(kubectl get secret -n $ans >/tmp/getsecretcontroller)
+$(kubectl get configmap -n $ans >/tmp/getconfigmapcontroller)
+$(kubectl describe secret -n $ans > /tmp/describesecretcontroller)
+$(kubectl describe configmap -n $ans > /tmp/describeconfigmapcontroller)
+$(kubectl get serviceaccount -n $ans > /tmp/getserviceaccountcontroller)
+$(kubectl describe serviceaccount -n $ans > /tmp/describeserviceaccountcontroller)
+$(kubectl events show -n $ans > /tmp/controllerevent)
+$(kubectl get storageclass -o wide > /tmp/getstorageclass)
+$(kubectl get pv -o wide > /tmp/getpvwide)
+$(kubectl get pvc -n default -o wide > /tmp/getpvcwide)
+echo "completed"
+
+}
+
+show_menu(){
+    normal=`echo "\033[m"`
+    menu=`echo "\033[36m"` #Blue
+    number=`echo "\033[33m"` #yellow
+    bgred=`echo "\033[41m"`
+    fgred=`echo "\033[31m"`
+    printf "\n${menu}*********************************************${normal}\n"
+    printf "${menu}**${number} 1)${menu} getpods${normal}\n"
+    printf "${menu}**${number} 2)${menu} describepod ${normal}\n"
+    printf "${menu}**${number} 3)${menu} get/describeconfigmap ${normal}\n"
+    printf "${menu}**${number} 4)${menu} nbukopslogs ${normal}\n"
+    printf "${menu}**${number} 5)${menu} To get All${normal}\n"
+    printf "${menu}*********************************************${normal}\n"
+    printf "Please enter a menu option and enter or ${fgred}x to exit. ${normal}"
+    read argu
+}
+show_menu 
+echo "going inside case statements with answer as $argu"
+#read -p "would you like to getpod or describepod or getconfigmap: " argu
+
+if [ "$argu" = 1 ]; then
+        read -p " Valid Values are Either 'allpods' or 'singlepod', kindly mention Accordingly:  " ps
+        case $ps in
+                "allpods") 
+                       $(kubectl get pods --all-namespaces -o jsonpath='{range .items[*]}{@.metadata.namespace}{"\t"}{@.metadata.name}{"\t"}{@.spec.containers[*].image}{"\n"}' >/tmp/allpodinfo)
+                        ;;
+                "singlepod") 
+                        getpods
+                        ;;
+        esac
+elif [ "$argu" = 2 ];then
+        echo " you are inside describe pod"
+        echo " valid values allpods or singlepod: " 
+        read  ps1
+        case $ps1 in
+               "allpods")
+                        $(kubectl describe pods > /tmp/describelocalpods.log)
+                        $(kubectl describe pods -n "default" > /tmp/describedefaultpods.log)
+                        ;;
+              "singlepod")
+                        describepods
+                        ;;
+        esac
+elif [ "$argu" = 3 ]; then
+        echo " you are inside the configmap "
+        echo "valid values are 'allconfigmaps' or 'single' namespace specific configmap "
+        read c1
+        case $c1 in
+                "allconfigmaps") 
+                                      $(kubectl get configmap --all-namespaces -o jsonpath='{range .items[*]}{@.metadata.namespace}{"\t"}{@.metadata.name}{"\n"}'> /tmp/getallconfigmapinfo)
+                        ;;
+                "single")
+                        getconfigmaps
+                        ;;
+        esac
+elif [ "$argu" = 4 ]; then
+        echo "you are inside the log collection option, this will only collect the nbukops logs"
+        getlogs
+elif [ "$argu" = 5 ]; then
+      echo " you are requesting to get all the information in your env"
+      $(kubectl get all -A > /tmp/getall.txt)
+fi
