@@ -201,6 +201,13 @@ spec:
         name: webserver
         ports:
         - containerPort: 8080
+        volumeMounts:
+        - name: logs
+          mountPath: /tmp
+      volumes:
+      - name: logs
+        hostPath:
+          path: /tmp/logs
 ---
 apiVersion: v1
 kind: Service
